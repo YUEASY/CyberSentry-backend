@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>D:\test\c++\public\softwareProtection\x64\Release\softwareProtection.exe</FullPath>
+      <FullPath>D:\test\c++\public\CyberSentry-backend\x64\Release\softwareProtection.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

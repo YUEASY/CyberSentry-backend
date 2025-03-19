@@ -9,10 +9,10 @@ int main() {
 
     sp::logger::initLogger(false, "", 0);
     
-    std::thread httpServer(sp::runServer);
-    httpServer.join();
+    //std::thread httpServer(sp::runServer);
+    //httpServer.join();
 
-
+    sp::runServer();
 
 
     return 0;

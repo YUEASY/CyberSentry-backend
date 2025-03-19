@@ -40,16 +40,16 @@ namespace sp {
 
     
 	struct MonitoringRule {
-		uint64_t id;
-		uint64_t app_id;                 // 应用ID
 		bool is_camouflaged;                 // 应用伪装开关
-		uint64_t camouflage_pid;          // 伪装显示的进程ID
-
+		bool is_protected;                   // 保护开关
 		bool is_recording_prevention_enabled; // 反录屏/反截图功能开关
 		uint32_t current_wnd; //当前窗口句柄
+		uint64_t id;
+		uint64_t app_id;                 // 应用ID
+		uint64_t camouflage_pid;          // 伪装显示的进程ID
 		uint64_t hwnd_val; // 窗口属性
 
-		bool is_protected;                   // 保护开关
+
 
 
 		// 无参构造函数
@@ -85,6 +85,12 @@ namespace sp {
     
 	
 	struct SystemMonitor {
+		bool is_charging;       // 是否正在充电
+		bool is_ac_power;       // 是否连接交流电源
+		BYTE ac_line_status_raw; // 原始交流电源状态值
+		BYTE battery_flag_raw; // 原始电池标志值
+		uint32_t battery_percentage; // 电池电量百分比 (0-100)
+		uint64_t battery_life_time; // 电池剩余使用时间 (秒)
 		uint64_t id;
 		float cpu_usage;
 		float memory_usage;
@@ -92,15 +98,7 @@ namespace sp {
 		float network_upload;
 		float network_download;
 		float temperature;
-		std::string sample_time; // Changed from uint64_t to std::string
-
-		uint32_t battery_percentage; // 电池电量百分比 (0-100)
-		bool is_charging;       // 是否正在充电
-		bool is_ac_power;       // 是否连接交流电源
-		uint64_t battery_life_time; // 电池剩余使用时间 (秒)
-		BYTE ac_line_status_raw; // 原始交流电源状态值
-		BYTE battery_flag_raw; // 原始电池标志值
-
+		std::string sample_time; 
 		SystemMonitor() {} 
 
 		// Full parameter constructor declaration - sample_time parameter type changed
@@ -115,14 +113,14 @@ namespace sp {
 	struct AppResourceMonitor {
 		uint64_t id;
 		uint64_t app_id;	// 等于pid
-		std::string app_name;
-		std::string icon_path; // Not implemented in this example for simplicity
+		uint64_t use_duration;
 		float cpu_usage;
 		float memory_usage_mb;
 		float disk_io_read;
 		float disk_io_write;
 		std::string sample_time;
-		uint64_t use_duration;          //使用时长（时间戳）
+		std::string app_name;
+		std::string icon_path; 
 		std::string power_use_level;       //电源消耗评级
 
 		// 无参构造函数
@@ -143,11 +141,11 @@ namespace sp {
 
     
 	struct MaliciousThreadLog {
+		uint32_t risk_level;
 		uint64_t id;
 		uint64_t app_id;
 		std::string thread_name; // 线程名 (现在是TID)
 		std::string thread_hash; // 模块名的哈希值
-		uint32_t risk_level;
 		std::string detection_time;
 
 		// 无参构造函数
@@ -183,12 +181,12 @@ namespace sp {
     struct AIAnalysisResult {
         uint64_t id;
         uint64_t user_id;
+		uint16_t score;
+		float confidence;
         std::string analysis_type;
         std::string content_hash;
         std::string result;
-        float confidence;
         std::string analysis_time;
-        uint16_t score;
         // 无参构造函数
         AIAnalysisResult()
             : id(0), user_id(0), confidence(0.0), score(0){
@@ -220,6 +218,7 @@ namespace sp {
     };
 
     struct UserInfo {
+		bool is_locked;
         uint64_t user_id;
         std::string username;
         std::string password;
@@ -228,7 +227,6 @@ namespace sp {
         std::string phone;
         std::string last_login_ip;
         std::string last_login_time;
-        bool is_locked;
         std::string create_time;
 
         // 无参构造函数
@@ -248,8 +246,8 @@ namespace sp {
     struct UserOperationLog {
         uint64_t log_id;
         uint64_t user_id;
+		uint64_t target_id;
         std::string operation_type;
-        uint64_t target_id;
         std::string operation_detail;
         std::string client_info;
         std::string operation_time;
@@ -275,11 +273,10 @@ namespace sp {
 	
 	struct FileInfo
 	{
+		bool force_delete;
+		bool is_encrypted;
 		uint64_t file_id;
 		std::string path;
-		bool force_delete;
-
-		bool is_encrypted;         
 		std::string secret_key;     
 
 		// 默认构造函数 (Default Constructor)

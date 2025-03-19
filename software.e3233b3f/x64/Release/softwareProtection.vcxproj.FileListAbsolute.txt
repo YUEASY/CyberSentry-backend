@@ -3,3 +3,8 @@ D:\test\c++\public\softwareProtection\software.e3233b3f\x64\Release\software.781
 D:\test\c++\public\softwareProtection\x64\Release\libcurl.dll
 D:\test\c++\public\softwareProtection\x64\Release\zlib1.dll
 D:\test\c++\public\softwareProtection\x64\Release\jsoncpp.dll
+D:\test\c++\public\CyberSentry-backend\x64\Release\libcurl.dll
+D:\test\c++\public\CyberSentry-backend\x64\Release\zlib1.dll
+D:\test\c++\public\CyberSentry-backend\x64\Release\jsoncpp.dll
+D:\test\c++\public\CyberSentry-backend\x64\Release\fmt.dll
+D:\test\c++\public\CyberSentry-backend\software.e3233b3f\x64\Release\software.7810A8B0.Up2Date

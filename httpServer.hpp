@@ -1135,6 +1135,147 @@ namespace sp
         }
     }
     
+    void handle_get_file_list(const httplib::Request& req, httplib::Response& res) {
+        if (!verifyToken(req, res)) return;  // 验证令牌
+        try {
+            std::vector<FileInfo> file_list;  // 存储所有文件信息的列表
+            bool flag = ServerManager::getInstance().getFileInfoService().getAllFileInfo(file_list);  // 获取所有文件信息
+            Json::Value root;  // JSON 根对象
+            if (flag) {
+                root["result"]["status"] = "success";  // 状态为成功
+                root["result"]["message"] = "All file information has been successfully obtained.";
+
+                // 遍历所有文件信息，并将其添加到 JSON 响应中
+                for (const auto& file_info : file_list) {
+                    Json::Value file_data;  // 存储单个文件信息的 JSON 对象
+                    file_data["file_id"] = file_info.file_id;
+                    file_data["path"] = file_info.path;
+                    file_data["force_delete"] = file_info.force_delete;
+                    file_data["is_encrypted"] = file_info.is_encrypted;
+                    file_data["secret_key"] = file_info.secret_key;
+
+                    // 将单个文件信息添加到结果数组中
+                    root["result"]["data"].append(file_data);
+                }
+            }
+            else {
+                root["result"]["status"] = "fail";  // 获取失败
+                root["result"]["message"] = "Failed to obtain all file information.";
+            }
+
+            // 设置响应内容为 JSON 格式
+            res.set_content(root.toStyledString(), "application/json");
+        }
+        catch (const std::exception& e) {
+            // 处理异常
+            res.status = 500;  // 设置为服务器错误
+            res.set_content("{\"result\": {\"status\": \"error\", \"message\": \"An error occurred while retrieving file information.\"}}", "application/json");
+        }
+    }
+
+    void handle_get_file_info(const httplib::Request& req, httplib::Response& res) {
+        if (!verifyToken(req, res)) return;  // 验证令牌
+        try {
+            int file_id = std::stoi(req.matches[1]);  // 获取路径中捕获的文件 ID
+            FileInfo file_info;
+            bool flag = ServerManager::getInstance().getFileInfoService().getFileInfoById(file_id, file_info);  // 获取文件信息
+            Json::Value root;  // JSON 根对象
+            if (flag) {
+                root["result"]["status"] = "success";  // 状态为成功
+                root["result"]["message"] = "File information retrieved successfully.";
+
+                // 将文件信息添加到 JSON 响应中
+                root["result"]["data"]["file_id"] = file_info.file_id;
+                root["result"]["data"]["path"] = file_info.path;
+                root["result"]["data"]["force_delete"] = file_info.force_delete;
+                root["result"]["data"]["is_encrypted"] = file_info.is_encrypted;
+                root["result"]["data"]["secret_key"] = file_info.secret_key;
+            }
+            else {
+                root["result"]["status"] = "fail";  // 获取失败
+                root["result"]["message"] = "File information retrieval failed.";
+            }
+
+            // 设置响应内容为 JSON 格式
+            res.set_content(root.toStyledString(), "application/json");
+        }
+        catch (const std::exception& e) {
+            // 处理异常
+            res.status = 500;  // 设置为服务器错误
+            res.set_content("{\"result\": {\"status\": \"error\", \"message\": \"Invalid file ID.\"}}", "application/json");
+        }
+    }
+
+    void handle_encrypt_file(const httplib::Request& req, httplib::Response& res) {
+        if (!verifyToken(req, res)) return;  // 验证令牌
+        try {
+            // 从请求体中获取加密所需的文件 ID 和密钥
+            Json::Value request_data;
+            Json::Reader reader;
+            if (!reader.parse(req.body, request_data)) {
+                res.status = 400;  // 错误的请求
+                res.set_content("{\"result\": {\"status\": \"error\", \"message\": \"Invalid request body.\"}}", "application/json");
+                return;
+            }
+
+            uint64_t file_id = request_data["file_id"].asUInt64();
+            std::string key = request_data["key"].asString();
+
+            bool flag = ServerManager::getInstance().getFileInfoService().encryptFile(file_id, key);  // 执行加密操作
+            Json::Value root;
+            if (flag) {
+                root["result"]["status"] = "success";
+                root["result"]["message"] = "File encrypted successfully.";
+            }
+            else {
+                root["result"]["status"] = "fail";
+                root["result"]["message"] = "File encryption failed.";
+            }
+
+            res.set_content(root.toStyledString(), "application/json");
+        }
+        catch (const std::exception& e) {
+            // 处理异常
+            res.status = 500;  // 设置为服务器错误
+            res.set_content("{\"result\": {\"status\": \"error\", \"message\": \"An error occurred during file encryption.\"}}", "application/json");
+        }
+    }
+
+    void handle_decrypt_file(const httplib::Request& req, httplib::Response& res) {
+        if (!verifyToken(req, res)) return;  // 验证令牌
+        try {
+            // 从请求体中获取解密所需的文件 ID
+            Json::Value request_data;
+            Json::Reader reader;
+            if (!reader.parse(req.body, request_data)) {
+                res.status = 400;  // 错误的请求
+                res.set_content("{\"result\": {\"status\": \"error\", \"message\": \"Invalid request body.\"}}", "application/json");
+                return;
+            }
+
+            uint64_t file_id = request_data["file_id"].asUInt64();
+
+            bool flag = ServerManager::getInstance().getFileInfoService().decryptFile(file_id);  // 执行解密操作
+            Json::Value root;
+            if (flag) {
+                root["result"]["status"] = "success";
+                root["result"]["message"] = "File decrypted successfully.";
+            }
+            else {
+                root["result"]["status"] = "fail";
+                root["result"]["message"] = "File decryption failed.";
+            }
+
+            res.set_content(root.toStyledString(), "application/json");
+        }
+        catch (const std::exception& e) {
+            // 处理异常
+            res.status = 500;  // 设置为服务器错误
+            res.set_content("{\"result\": {\"status\": \"error\", \"message\": \"An error occurred during file decryption.\"}}", "application/json");
+        }
+    }
+
+
     void runServer()
     {
         sp::HttpServer svr;
@@ -1176,6 +1317,11 @@ namespace sp
         svr.Get(R"(/api/user/(\d+))", handle_get_user_info);
         svr.Post(R"(/api/user/(\d+))", handle_update_user_info);
         svr.Post(R"(/api/user/(\d+)/delete)", handle_delete_user_info);
+
+        svr.Get(R"(/api/files)", handle_get_file_list);
+        svr.Get(R"(/api/files/(\d+))", handle_get_file_info);
+        svr.Post(R"(/api/files/encrypt)", handle_encrypt_file);
+        svr.Post(R"(/api/files/decrypt)", handle_decrypt_file);
 
         //svr.Post(R"(/api/file_upload)", handle_file_upload);
         //svr.Post(R"(/api/data_import)", handle_data_import);

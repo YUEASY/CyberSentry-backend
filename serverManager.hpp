@@ -770,18 +770,18 @@ namespace sp {
 
     class ProtectionService {
     public:
-        bool protectFakeProcess(uint64_t TargetPid, uint64_t FakePid) {
-            return ProtectServer::GetInstance().protectFakeProcess(TargetPid, FakePid);
-        }
-        bool protectAntiScreenShot(uint64_t TargetPid) {
-            return ProtectServer::GetInstance().protectAntiScreenShot(TargetPid);
-        }
-        bool protectAntiModify(uint64_t TargetPid) {
-            return ProtectServer::GetInstance().protectAntiModify(TargetPid);
-        }
-        bool protectForceDelete(uint64_t TargetPid) {
-            return ProtectServer::GetInstance().protectForceDelete("");
-        }
+        //bool protectFakeProcess(uint64_t TargetPid, uint64_t FakePid) {
+        //    return ProtectServer::GetInstance().protectFakeProcess(TargetPid, FakePid);
+        //}
+        //bool protectAntiScreenShot(uint64_t TargetPid) {
+        //    return ProtectServer::GetInstance().protectAntiScreenShot(TargetPid);
+        //}
+        //bool protectAntiModify(uint64_t TargetPid) {
+        //    return ProtectServer::GetInstance().protectAntiModify(TargetPid);
+        //}
+        //bool protectForceDelete(uint64_t TargetPid) {
+        //    return ProtectServer::GetInstance().protectForceDelete("");
+        //}
     };
 
     // ----------------------- 邮件发送服务 ----------------------------
@@ -791,6 +791,70 @@ namespace sp {
         bool sendMail(std::string_view address, std::string_view subject, std::string_view body) {
             return SmtpServer::getInstance().sendMail(address, subject, body);
         }
+    };
+
+    // ----------------------- 文件信息加密服务 ----------------------------
+
+    class FileInfoService
+    {
+    public:
+        bool getAllFileInfo(std::vector<FileInfo>& files)
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!FileInfoTable_)
+            {
+                FileInfoTable_ = std::make_shared<FileInfoTable>();
+            }
+            return FileInfoTable_->getAllFileInfo(files);
+        }
+
+        bool getFileInfoById(uint64_t file_id, FileInfo& file)
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!FileInfoTable_)
+            {
+                FileInfoTable_ = std::make_shared<FileInfoTable>();
+            }
+            return FileInfoTable_->getFileInfoById(file_id,file);
+        }
+
+        // 加密文件
+        bool encryptFile(uint64_t file_id, const std::string& key)
+        {
+            //加密函数
+            //...
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!FileInfoTable_)
+            {
+                FileInfoTable_ = std::make_shared<FileInfoTable>();
+            }
+            return FileInfoTable_->encryptFile(file_id, key);
+        }
+
+        // 解密文件
+        bool decryptFile(uint64_t file_id)
+        {
+            //解密函数
+            //.....
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!FileInfoTable_)
+            {
+                FileInfoTable_ = std::make_shared<FileInfoTable>();
+            }
+            return FileInfoTable_->decryptFile(file_id);
+        }
+        bool forceDeleteFile(uint64_t file_id)
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!FileInfoTable_)
+            {
+                FileInfoTable_ = std::make_shared<FileInfoTable>();
+            }
+            return FileInfoTable_->forceDeleteFile(file_id);
+        }
+    private:
+        std::shared_ptr<FileInfoTable> FileInfoTable_;
+        std::mutex mutex_;
     };
 
     // ----------------------- 聚合各个服务的门面 ----------------------------
@@ -805,7 +869,7 @@ namespace sp {
         ServerManager(const ServerManager&) = delete;
         ServerManager& operator=(const ServerManager&) = delete;
 
-        // 提供对各个服务的访问接口（保持不变）
+        // 提供对各个服务的访问接口
         AppInfoService& getAppInfoService() { return appInfoService_; }
         MonitoringRuleService& getMonitoringRuleService() { return monitoringRuleService_; }
         UserOperationLogService& getUserOperationLogService() { return userOperationLogService_; }
@@ -819,6 +883,7 @@ namespace sp {
         SystemInfoService& getSystemInfoService() { return systemInfoService_; }
         ProtectionService& getProtectionService() { return protectionService_; }
         EmailService& getEmailService() { return emailService_; }
+        FileInfoService& getFileInfoService() { return FileInfoService_; }
 
     private:
         ServerManager() = default;
@@ -826,7 +891,7 @@ namespace sp {
 
         static ServerManager instance; // 静态成员声明
 
-        // 各个服务的实例（保持不变）
+        // 各个服务的实例
         AppInfoService appInfoService_;
         MonitoringRuleService monitoringRuleService_;
         UserOperationLogService userOperationLogService_;
@@ -840,6 +905,7 @@ namespace sp {
         SystemInfoService systemInfoService_;
         ProtectionService protectionService_;
         EmailService emailService_;
+        FileInfoService FileInfoService_;
     };
     ServerManager ServerManager::instance;
 } // namespace sp

@@ -244,8 +244,6 @@ namespace sp
                 rule.current_wnd = std::stoul(row[5]);
                 rule.hwnd_val = std::stoul(row[6]);
                 rule.is_protected = std::stoi(row[7]);
-                rule.force_delete = std::stoi(row[8]);
-                rule.file_name = row[9] ? row[9] : "";
 
                 mysql_free_result(res);
                 return true;
@@ -289,8 +287,6 @@ namespace sp
                 rule.current_wnd = std::stoul(row[5]);
                 rule.hwnd_val = std::stoul(row[6]);
                 rule.is_protected = std::stoi(row[7]);
-                rule.force_delete = std::stoi(row[8]);
-                rule.file_name = row[9] ? row[9] : "";
 
                 rules.push_back(rule);
             }
@@ -303,16 +299,14 @@ namespace sp
         bool createMonitoringRule(const MonitoringRule& rule)
         {
             std::string sql = "INSERT INTO monitoring_rule (app_id, is_camouflaged, camouflage_pid, "
-                "is_recording_prevention_enabled, current_wnd, hwnd_val, is_protected, force_delete, file_name) VALUES (";
+                "is_recording_prevention_enabled, current_wnd, hwnd_val, is_protected) VALUES (";
             sql.append(std::to_string(rule.app_id) + ", ");
             sql.append(std::to_string(rule.is_camouflaged) + ", ");
             sql.append(std::to_string(rule.camouflage_pid) + ", ");
             sql.append(std::to_string(rule.is_recording_prevention_enabled) + ", ");
             sql.append(std::to_string(rule.current_wnd) + ", ");
             sql.append(std::to_string(rule.hwnd_val) + ", ");
-            sql.append(std::to_string(rule.is_protected) + ", ");
-            sql.append(std::to_string(rule.force_delete) + ", ");
-            sql.append("'" + rule.file_name + "');");
+            sql.append(std::to_string(rule.is_protected) + "); ");
 
             mtx.lock();
             bool result = Utils::mysqlQuery(mysql, sql);
@@ -331,9 +325,7 @@ namespace sp
                 "is_recording_prevention_enabled = " + std::to_string(rule.is_recording_prevention_enabled) + ", "
                 "current_wnd = " + std::to_string(rule.current_wnd) + ", "
                 "hwnd_val = " + std::to_string(rule.hwnd_val) + ", "
-                "is_protected = " + std::to_string(rule.is_protected) + ", "
-                "force_delete = " + std::to_string(rule.force_delete) + ", "
-                "file_name = '" + rule.file_name + "' "
+                "is_protected = " + std::to_string(rule.is_protected) + 
                 "WHERE id = " + std::to_string(rule.id) + ";";
 
             mtx.lock();
@@ -368,27 +360,30 @@ namespace sp
         bool insertSystemMonitor(const SystemMonitor& record)
         {
             std::string sql;
-            sql.append("INSERT INTO system_monitor (cpu_usage, memory_usage, disk_usage, network_upload, network_download, temperature, sample_time) ");
-            sql.append("VALUES (");
-            sql.append(std::to_string(record.cpu_usage));
-            sql.append(", ");
-            sql.append(std::to_string(record.memory_usage));
-            sql.append(", ");
-            sql.append(std::to_string(record.disk_usage));
-            sql.append(", ");
-            sql.append(std::to_string(record.network_upload));
-            sql.append(", ");
-            sql.append(std::to_string(record.network_download));
-            sql.append(", ");
+            sql.append("INSERT INTO system_monitor (cpu_usage, memory_usage, disk_usage, network_upload, network_download, temperature, sample_time, ");
+            sql.append("battery_percentage, is_charging, is_ac_power, battery_life_time, ac_line_status_raw, battery_flag_raw) VALUES (");
+            sql.append(std::to_string(record.cpu_usage) + ", ");
+            sql.append(std::to_string(record.memory_usage) + ", ");
+            sql.append(std::to_string(record.disk_usage) + ", ");
+            sql.append(std::to_string(record.network_upload) + ", ");
+            sql.append(std::to_string(record.network_download) + ", ");
             sql.append(record.temperature >= 0 ? std::to_string(record.temperature) : "NULL");  // 允许温度为NULL
             sql.append(", '");
-            sql.append(record.sample_time);  // 使用字符串格式的时间
-            sql.append("');");
+            sql.append(record.sample_time);
+            sql.append("', ");
+            sql.append(std::to_string(record.battery_percentage) + ", ");
+            sql.append(record.is_charging ? "1" : "0");
+            sql.append(", ");
+            sql.append(record.is_ac_power ? "1" : "0");
+            sql.append(", ");
+            sql.append(std::to_string(record.battery_life_time) + ", ");
+            sql.append(std::to_string(record.ac_line_status_raw) + ", ");
+            sql.append(std::to_string(record.battery_flag_raw));
+            sql.append(");");
 
             mtx.lock();
             bool result = Utils::mysqlQuery(mysql, sql);
             mtx.unlock();
-
             return result;
         }
 
@@ -417,14 +412,21 @@ namespace sp
             while ((row = mysql_fetch_row(res)) != nullptr)
             {
                 SystemMonitor record;
-                record.id = std::stoull(row[0]);                    // 主键ID
-                record.cpu_usage = std::stod(row[1]);               // CPU使用率
-                record.memory_usage = std::stod(row[2]);            // 内存使用率
-                record.disk_usage = std::stod(row[3]);              // 磁盘使用率
-                record.network_upload = std::stod(row[4]);          // 上传速度
-                record.network_download = std::stod(row[5]);        // 下载速度
-                record.temperature = row[6] ? std::stod(row[6]) : -1; // 温度（如果是NULL则赋值为-1）
-                record.sample_time = row[7] ? row[7] : "";          // 采样时间
+                record.id = std::stoull(row[0]);
+                record.cpu_usage = std::stof(row[1]);
+                record.memory_usage = std::stof(row[2]);
+                record.disk_usage = std::stof(row[3]);
+                record.network_upload = std::stof(row[4]);
+                record.network_download = std::stof(row[5]);
+                record.temperature = row[6] ? std::stof(row[6]) : -1;
+                record.sample_time = row[7] ? row[7] : "";
+
+                record.battery_percentage = static_cast<uint32_t>(std::stoul(row[8]));
+                record.is_charging = std::stoi(row[9]) != 0;
+                record.is_ac_power = std::stoi(row[10]) != 0;
+                record.battery_life_time = std::stoull(row[11]);
+                record.ac_line_status_raw = static_cast<BYTE>(std::stoul(row[12]));
+                record.battery_flag_raw = static_cast<BYTE>(std::stoul(row[13]));
 
                 records.push_back(record);
             }
@@ -462,14 +464,21 @@ namespace sp
             while ((row = mysql_fetch_row(res)) != nullptr)
             {
                 SystemMonitor record;
-                record.id = std::stoull(row[0]);                    // 主键ID
-                record.cpu_usage = std::stod(row[1]);               // CPU使用率
-                record.memory_usage = std::stod(row[2]);            // 内存使用率
-                record.disk_usage = std::stod(row[3]);              // 磁盘使用率
-                record.network_upload = std::stod(row[4]);          // 上传速度
-                record.network_download = std::stod(row[5]);        // 下载速度
-                record.temperature = row[6] ? std::stod(row[6]) : -1; // 温度
-                record.sample_time = row[7] ? row[7] : "";          // 采样时间
+                record.id = std::stoull(row[0]);
+                record.cpu_usage = std::stof(row[1]);
+                record.memory_usage = std::stof(row[2]);
+                record.disk_usage = std::stof(row[3]);
+                record.network_upload = std::stof(row[4]);
+                record.network_download = std::stof(row[5]);
+                record.temperature = row[6] ? std::stof(row[6]) : -1;
+                record.sample_time = row[7] ? row[7] : "";
+
+                record.battery_percentage = static_cast<uint32_t>(std::stoul(row[8]));
+                record.is_charging = std::stoi(row[9]) != 0;
+                record.is_ac_power = std::stoi(row[10]) != 0;
+                record.battery_life_time = std::stoull(row[11]);
+                record.ac_line_status_raw = static_cast<BYTE>(std::stoul(row[12]));
+                record.battery_flag_raw = static_cast<BYTE>(std::stoul(row[13]));
 
                 records.push_back(record);
             }
@@ -478,6 +487,7 @@ namespace sp
             return true;
         }
     };
+
 
     class AppResourceMonitorTable : public BaseTable
     {
@@ -489,8 +499,7 @@ namespace sp
         {
             std::string sql;
             sql.append("INSERT INTO app_resource_monitor (app_id, app_name, icon_path, cpu_usage, memory_usage_mb, ");
-            sql.append("disk_io_read, disk_io_write, gpu_usage, sample_time) ");
-            sql.append("VALUES (");
+            sql.append("disk_io_read, disk_io_write, sample_time, use_duration, power_use_level) VALUES (");
             sql.append(std::to_string(record.app_id));
             sql.append(", '");
             sql.append(record.app_name);
@@ -504,8 +513,12 @@ namespace sp
             sql.append(std::to_string(record.disk_io_read));
             sql.append(", ");
             sql.append(std::to_string(record.disk_io_write));
-            sql.append(", ");
-            sql.append(record.sample_time);  // 使用字符串格式的时间
+            sql.append(", '");
+            sql.append(record.sample_time);
+            sql.append("', ");
+            sql.append(std::to_string(record.use_duration));
+            sql.append(", '");
+            sql.append(record.power_use_level);
             sql.append("');");
 
             mtx.lock();
@@ -534,31 +547,33 @@ namespace sp
                 mtx.unlock();
                 return false;
             }
-            mtx.unlock();
 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(res)) != nullptr)
             {
                 AppResourceMonitor record;
                 record.id = std::stoull(row[0]);                       // 主键ID
-                record.app_id = std::stoi(row[1]);                     // 关联应用ID
+                record.app_id = std::stoull(row[1]);                   // 进程 ID (pid)
                 record.app_name = row[2];                               // 应用名称
                 record.icon_path = row[3] ? row[3] : "";               // 图标文件路径
-                record.cpu_usage = std::stod(row[4]);                  // 进程CPU使用率
-                record.memory_usage_mb = std::stod(row[5]);            // 内存占用量 (MB)
-                record.disk_io_read = std::stod(row[6]);               // 磁盘读取速度 (MB/s)
-                record.disk_io_write = std::stod(row[7]);              // 磁盘写入速度 (MB/s)
+                record.cpu_usage = std::stof(row[4]);                  // 进程CPU使用率
+                record.memory_usage_mb = std::stof(row[5]);            // 内存占用量 (MB)
+                record.disk_io_read = std::stof(row[6]);               // 磁盘读取速度 (MB/s)
+                record.disk_io_write = std::stof(row[7]);              // 磁盘写入速度 (MB/s)
                 record.sample_time = row[8] ? row[8] : "";             // 采样时间
+                record.use_duration = std::stoull(row[9]);             // 使用时长（时间戳）
+                record.power_use_level = row[10] ? row[10] : "";       // 电源消耗评级
 
                 records.push_back(record);
             }
 
             mysql_free_result(res);
+            mtx.unlock();
             return true;
         }
 
         // 获取特定应用的监控记录
-        bool getAppResourceMonitorsByAppId(uint32_t app_id, std::vector<AppResourceMonitor>& records)
+        bool getAppResourceMonitorsByAppId(uint64_t app_id, std::vector<AppResourceMonitor>& records)
         {
             std::string sql = "SELECT * FROM app_resource_monitor WHERE app_id = ";
             sql.append(std::to_string(app_id));
@@ -578,29 +593,32 @@ namespace sp
                 mtx.unlock();
                 return false;
             }
-            mtx.unlock();
 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(res)) != nullptr)
             {
                 AppResourceMonitor record;
                 record.id = std::stoull(row[0]);                       // 主键ID
-                record.app_id = std::stoi(row[1]);                     // 关联应用ID
+                record.app_id = std::stoull(row[1]);                   // 进程 ID (pid)
                 record.app_name = row[2];                               // 应用名称
                 record.icon_path = row[3] ? row[3] : "";               // 图标文件路径
-                record.cpu_usage = std::stod(row[4]);                  // 进程CPU使用率
-                record.memory_usage_mb = std::stod(row[5]);            // 内存占用量 (MB)
-                record.disk_io_read = std::stod(row[6]);               // 磁盘读取速度 (MB/s)
-                record.disk_io_write = std::stod(row[7]);              // 磁盘写入速度 (MB/s)
+                record.cpu_usage = std::stof(row[4]);                  // 进程CPU使用率
+                record.memory_usage_mb = std::stof(row[5]);            // 内存占用量 (MB)
+                record.disk_io_read = std::stof(row[6]);               // 磁盘读取速度 (MB/s)
+                record.disk_io_write = std::stof(row[7]);              // 磁盘写入速度 (MB/s)
                 record.sample_time = row[8] ? row[8] : "";             // 采样时间
+                record.use_duration = std::stoull(row[9]);             // 使用时长（时间戳）
+                record.power_use_level = row[10] ? row[10] : "";       // 电源消耗评级
 
                 records.push_back(record);
             }
 
             mysql_free_result(res);
+            mtx.unlock();
             return true;
         }
     };
+
 
     class MaliciousThreadLogTable : public BaseTable
     {
@@ -1448,5 +1466,124 @@ namespace sp
             return true;
         }
     };
+
+
+    class FileInfoTable : public BaseTable
+    {
+    public:
+        using ptr = std::shared_ptr<FileInfoTable>;
+
+        bool getAllFileInfo(std::vector<FileInfo>& files)
+        {
+            std::string sql = "SELECT file_id, path, force_delete, is_encrypted, secret_key FROM file_info WHERE force_delete = 0;"; // 只查询未被强删的文件
+
+            mtx.lock();
+            if (!Utils::mysqlQuery(mysql, sql))
+            {
+                mtx.unlock();
+                return false;
+            }
+
+            MYSQL_RES* res = mysql_store_result(mysql);
+            if (res == nullptr)
+            {
+                LOG_ERROR("mysql store result error: {}", std::string(mysql_error(mysql)));
+                mtx.unlock();
+                return false;
+            }
+
+            MYSQL_ROW row;
+            while ((row = mysql_fetch_row(res)) != nullptr)
+            {
+                FileInfo file;
+                file.file_id = std::stoull(row[0]);
+                file.path = row[1] ? row[1] : "";
+                file.force_delete = std::stoi(row[2]);
+                file.is_encrypted = std::stoi(row[3]);
+                file.secret_key = row[4] ? row[4] : "";
+
+                files.push_back(file);
+            }
+
+            mysql_free_result(res);
+            mtx.unlock();
+            return true;
+        }
+
+
+        bool getFileInfoById(uint64_t file_id, FileInfo& file)
+        {
+            std::string sql = "SELECT file_id, path, force_delete, is_encrypted, secret_key FROM file_info WHERE file_id = " + std::to_string(file_id) + " AND force_delete = 0;"; // 加入条件判断是否被强删
+
+            mtx.lock();
+            if (!Utils::mysqlQuery(mysql, sql))
+            {
+                mtx.unlock();
+                return false;
+            }
+
+            MYSQL_RES* res = mysql_store_result(mysql);
+            if (res == nullptr)
+            {
+                LOG_ERROR("mysql store result error: {}", std::string(mysql_error(mysql)));
+                mtx.unlock();
+                return false;
+            }
+
+            MYSQL_ROW row = mysql_fetch_row(res);
+            if (row)
+            {
+                file.file_id = std::stoull(row[0]);
+                file.path = row[1] ? row[1] : "";
+                file.force_delete = std::stoi(row[2]);
+                file.is_encrypted = std::stoi(row[3]);
+                file.secret_key = row[4] ? row[4] : "";
+            }
+            else
+            {
+                mysql_free_result(res);
+                mtx.unlock();
+                return false;
+            }
+
+            mysql_free_result(res);
+            mtx.unlock();
+            return true;
+        }
+
+
+        // 加密文件
+        bool encryptFile(uint64_t file_id, const std::string& key)
+        {
+            std::string sql = "UPDATE file_info SET is_encrypted = 1, secret_key = '" + key + "' WHERE file_id = " + std::to_string(file_id) + "AND force_delete = 0;";
+
+            mtx.lock();
+            bool result = Utils::mysqlQuery(mysql, sql);
+            mtx.unlock();
+            return result;
+        }
+
+        // 解密文件
+        bool decryptFile(uint64_t file_id)
+        {
+            std::string sql = "UPDATE file_info SET is_encrypted = 0, secret_key = '' WHERE file_id = " + std::to_string(file_id) + "AND force_delete = 0;";
+
+            mtx.lock();
+            bool result = Utils::mysqlQuery(mysql, sql);
+            mtx.unlock();
+            return result;
+        }
+
+        bool forceDeleteFile(uint64_t file_id)
+        {
+            std::string sql = "UPDATE file_info SET force_delete = 1 WHERE file_id = " + std::to_string(file_id) + "AND force_delete = 0;";
+            mtx.lock();
+            bool result = Utils::mysqlQuery(mysql, sql);
+            mtx.unlock();
+            return result;
+        }
+
+    };
+
 
 }
