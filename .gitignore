@@ -1,0 +1,76 @@
+## Windows 相关
+# Windows 缓存文件
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# VS 相关
+.vscode/
+.vs/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+
+# CMake 相关
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+CMakeLists.txt.user
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# 编译输出
+*.obj
+*.o
+*.lo
+*.la
+*.al
+*.libs
+*.dll
+*.so
+*.so.*
+*.dylib
+*.lib
+*.a
+*.exp
+*.pdb
+*.ilk
+*.idb
+*.dsym/
+*.ncb
+*.sdf
+*.opendb
+*.tlog
+*.log
+
+# 生成的可执行文件
+*.exe
+*.out
+*.app
+*.iobj
+*.ipdb
+*.rsp
+
+# Qt 相关
+moc_*.cpp
+moc_*.h
+ui_*.h
+qrc_*.cpp
+qmake.stash
+*.pro.user*
+
+# 其他 IDE 相关
+.idea/
+*.iml
+*.swp
+*.swo
+*.bak
+*~
+*.orig
+*.tmp
