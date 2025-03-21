@@ -20,12 +20,13 @@
 #include <json/json.h>
 
 namespace sp {
-
+    extern std::atomic<bool> running;
     // ----------------------- 数据库相关服务 ----------------------------
 
     // 负责AppInfo相关的数据库操作
     class AppInfoService {
     public:
+        // 获取指定ID的AppInfo
         bool getAppInfoById(uint64_t id, AppInfo& info) {
             std::lock_guard<std::mutex> lock(mutex_);
 
@@ -48,6 +49,7 @@ namespace sp {
             return result;
         }
 
+        // 获取所有AppInfo
         bool getAllAppInfo(std::vector<AppInfo>& app_info_list_out) {
             std::lock_guard<std::mutex> lock(mutex_);
 
@@ -75,61 +77,70 @@ namespace sp {
             return result;
         }
 
-        // 刷新缓存：从数据库中获取最新数据，更新内存中的缓存
-        void refreshCache() {
-            std::lock_guard<std::mutex> lock(mutex_);
-            std::vector<AppInfo> dbData;
-            if (!appInfoTable_) {
-                appInfoTable_ = std::make_shared<AppInfoTable>();
-            }
-            if (appInfoTable_->getAllAppInfo(dbData)) {
-                // 清空原有缓存并更新为最新数据
-                app_info_list.clear();
-                for (const auto& info : dbData) {
-                    app_info_list[info.id] = info;
-                }
-            }
-        }
-
+        // 构造函数
         explicit AppInfoService(int interval_seconds = 300)
-        {
+            : running(true) {
             startPeriodicRefresh(interval_seconds);
         }
 
+        // 析构函数
         ~AppInfoService() {
-            stop_flag = true; // 请求线程停止
             if (refresh_thread.joinable()) {
+                running.store(false);
                 refresh_thread.join(); // 等待线程结束
             }
         }
 
     private:
-        // 启动后台线程，定时刷新缓存
-        void startPeriodicRefresh(int interval_seconds) 
-        {
-            refresh_thread = std::thread([this, interval_seconds]() 
-                {
-                while (!stop_flag) 
-                {
-                    std::this_thread::sleep_for(std::chrono::seconds(interval_seconds));
-                    if (!stop_flag.load()) 
+        // 内部帮助函数，用于更新缓存并写入数据库
+        void updateCacheAndWriteToDatabase() {
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            // 获取所有当前进程信息
+            std::vector<AppInfo> currentProcesses;
+            bool ret = ProtectServer::GetInstance().getAllProcessInfo(currentProcesses);
+
+            // 检测新进程并更新缓存
+            for (auto& process : currentProcesses) {
+                app_info_list[process.id] = process;  // 更新缓存
+            }
+
+            // 定期将缓存中的数据写入数据库
+            if (!appInfoTable_) {
+                appInfoTable_ = std::make_shared<AppInfoTable>();
+            }
+
+            // 批量插入
+            std::vector<AppInfo> appInfoVector;
+            for (const auto& pair : app_info_list) {
+                appInfoVector.push_back(pair.second); 
+            }
+            appInfoTable_->createOrUpdateAppInfoBatch(appInfoVector);
+        }
+
+        // 启动后台线程，定时刷新缓存并写入数据库
+        void startPeriodicRefresh(int interval_seconds) {
+            refresh_thread = std::thread([this, interval_seconds]() {
+                while (running.load()) {
+                    int n = interval_seconds / 10;
+                    while (n--)
                     {
-                        refreshCache();
+                        std::this_thread::sleep_for(std::chrono::seconds(10));
+                        if (!running.load()) break;
+                    }
+                    if (running.load()) {
+                        updateCacheAndWriteToDatabase();
                     }
                 }
                 });
         }
 
-
-
-    private:
-        std::shared_ptr<AppInfoTable> appInfoTable_;
-        std::unordered_map<uint64_t, AppInfo> app_info_list; // 缓存的App信息
-        std::mutex mutex_;
-        std::atomic<bool> stop_flag{ false };
-        std::thread refresh_thread;
+        std::unordered_map<uint64_t, AppInfo> app_info_list; // 缓存AppInfo
+        std::shared_ptr<AppInfoTable> appInfoTable_;         // 数据库表
+        std::mutex mutex_;                                  // 线程安全
+        std::atomic<bool> running;                          // 用于控制线程
+        std::thread refresh_thread;                         // 定期刷新线程
     };
-
 
     // 负责监控规则相关操作
     class MonitoringRuleService {
@@ -228,7 +239,6 @@ namespace sp {
 
         // 析构函数确保线程安全退出
         ~MonitoringRuleService() {
-            stop_flag_.store(true);  // 设置停止标志
             if (refresh_thread_.joinable()) {
                 refresh_thread_.join();  // 等待线程结束
             }
@@ -238,10 +248,16 @@ namespace sp {
         {
             refresh_thread_ = std::thread([this, interval_seconds]() 
                 {
-                while (!stop_flag_.load()) 
+                while (running.load()) 
                 {
-                    std::this_thread::sleep_for(std::chrono::seconds(interval_seconds));
-                    if (!stop_flag_.load()) 
+                    int n = interval_seconds / 10;
+                    while (n--)
+                    {
+                        std::this_thread::sleep_for(std::chrono::seconds(10));
+                        if (!running.load()) break;
+                    }
+                    
+                    if (running.load())
                     {  
                         refreshCache();
                     }
@@ -253,7 +269,6 @@ namespace sp {
         std::shared_ptr<MonitoringRuleTable> monitoringRuleTable_;
         std::unordered_map<uint64_t, MonitoringRule> monitoring_rule_list; //key :app_id
         std::mutex mutex_;
-        std::atomic<bool> stop_flag_{ false };
         std::thread refresh_thread_;
  
     };
@@ -350,19 +365,19 @@ namespace sp {
 
         // 析构函数确保线程安全退出
         ~SystemMonitorService() {
-            stop_flag_.store(true);  // 设置停止标志
             if (cache_thread_.joinable()) cache_thread_.join();
             if (db_thread_.joinable()) db_thread_.join();
         }
     private:
         void startPeriodicCacheUpdate(int interval_seconds) {
             cache_thread_ = std::thread([this, interval_seconds]() {
-                while (!stop_flag_.load()) {
+                while (running.load()) {
                     std::this_thread::sleep_for(std::chrono::seconds(interval_seconds));
-                    if (stop_flag_.load()) break;
-
-                    std::vector<SystemMonitor> newData /*= fetchNewData()*/;  // 假设已实现
-                    updateCache(newData);
+                    if (running.load())
+                    {
+                        std::vector<SystemMonitor> newData /*= fetchNewData()*/;  // 假设已实现
+                        updateCache(newData);
+                    }
                 }
                 });
         }
@@ -370,9 +385,14 @@ namespace sp {
         // 启动数据库写入线程
         void startPeriodicWriteToDatabase(int interval_seconds) {
             db_thread_ = std::thread([this, interval_seconds]() {
-                while (!stop_flag_.load()) {
-                    std::this_thread::sleep_for(std::chrono::seconds(interval_seconds));
-                    if (stop_flag_.load()) break;
+                while (running.load()) {
+                    int n = interval_seconds / 10;
+                    while (n--)
+                    {
+                        std::this_thread::sleep_for(std::chrono::seconds(10));
+                        if (!running.load()) break;
+                    }
+                    if (running.load()) 
                     writeToDatabaseIfNeeded();
                 }
                 });
@@ -383,7 +403,6 @@ namespace sp {
         std::shared_ptr<SystemMonitorTable> systemMonitorTable_;
         std::deque<SystemMonitor> system_monitor_buffer; // 1000条
         std::mutex mutex_;
-        std::atomic<bool> stop_flag_{ false };
         std::thread cache_thread_;
         std::thread db_thread_;
     };
@@ -510,7 +529,6 @@ namespace sp {
 
         // 析构函数确保线程安全终止
         ~AppResourceMonitorService() {
-            stop_flag_.store(true);  // 设置停止标志
             if (refresh_thread_.joinable()) {
                 refresh_thread_.join();  // 等待线程结束
             }
@@ -518,9 +536,15 @@ namespace sp {
     private:
         void startPeriodicRefresh(int interval_seconds) {
             refresh_thread_ = std::thread([this, interval_seconds]() {
-                while (!stop_flag_.load()) {
-                    std::this_thread::sleep_for(std::chrono::seconds(interval_seconds));
-                    if (!stop_flag_.load()) refreshCache();
+                while (running.load()) {
+                    int n = interval_seconds/10;
+                    while (n--)
+                    {
+                        std::this_thread::sleep_for(std::chrono::seconds(10));
+                        if (!running.load()) break;
+                    }
+
+                    if (running.load()) refreshCache();
                 }
                 });
         }
@@ -528,7 +552,6 @@ namespace sp {
         std::shared_ptr<AppResourceMonitorTable> appResourceMonitorTable_;
         std::unordered_map<uint64_t, std::deque<AppResourceMonitor>> app_resource_monitor_lists;   // 600条
         std::mutex mutex_;
-        std::atomic<bool> stop_flag_{ false };
         std::thread refresh_thread_;
     };
 
@@ -621,19 +644,19 @@ namespace sp {
 
         // 析构函数确保线程安全退出
         ~FileModificationLogService() {
-            stop_flag_.store(true);
             if (refresh_thread_.joinable()) refresh_thread_.join();
         }
     private:
         // 启动后台刷新线程
         void startPeriodicCacheUpdate(int interval_seconds) {
             refresh_thread_ = std::thread([this, interval_seconds]() {
-                while (!stop_flag_.load()) {
+                while (running.load()) {
                     std::this_thread::sleep_for(std::chrono::seconds(interval_seconds));
-                    if (stop_flag_.load()) break;
-
-                    std::vector<FileModificationLog> newData /*= fetchNewData()*/;
-                    updateCache(newData);
+                    if (running.load())
+                    {
+                        std::vector<FileModificationLog> newData /*= fetchNewData()*/;
+                        updateCache(newData);
+                    }
                 }
                 });
         }
@@ -641,7 +664,6 @@ namespace sp {
         std::shared_ptr<FileModificationLogTable> fileModificationLogTable_;
         std::deque<FileModificationLog> file_modification_log_buffer;   // 1000条
         std::mutex mutex_;
-        std::atomic<bool> stop_flag_{ false };
         std::thread refresh_thread_;
     };
 

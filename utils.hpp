@@ -9,12 +9,21 @@
 #include "logger.hpp"
 #include <mysql.h>
 #include <json/json.h>
-
+#include <filesystem>
 namespace sp
 {
     class Utils
     {
     public:
+        static std::string getFileExtension(const std::string& file_path) {
+            std::filesystem::path path(file_path);
+            return path.extension().string(); // 获取文件的扩展名
+        }
+
+        static std::string changeFileExtension(const std::string& file_path, const std::string& extension) {
+            std::filesystem::path path(file_path);
+            return path.stem().string() + "." + extension; // 修改文件的扩展名
+        }
         static std::string vcode()
         {
             std::random_device rd;

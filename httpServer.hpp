@@ -9,6 +9,7 @@
 #include <curl/curl.h>
 namespace sp
 {
+    std::atomic<bool> running(true);
     class HttpServer {
     public:
         using Handler = std::function<void(const httplib::Request&, httplib::Response&)>;
@@ -29,16 +30,6 @@ namespace sp
                 handler(req, res);
                 });
         }
-        void Put(const std::string& path, Handler handler) {
-            server.Put(path, [handler](const httplib::Request& req, httplib::Response& res) {
-                handler(req, res);
-                });
-        }
-        void Delete(const std::string& path, Handler handler) {
-            server.Delete(path, [handler](const httplib::Request& req, httplib::Response& res) {
-                handler(req, res);
-                });
-        }
         // 设置POST请求路由
         void Post(const std::string& path, Handler handler) {
             server.Post(path, [handler](const httplib::Request& req, httplib::Response& res) {
@@ -54,12 +45,24 @@ namespace sp
             if (!server.is_valid()) {
                 return false;
             }
-            return server.listen("0.0.0.0", port);
+            close_thread = std::thread([this]() {
+                while (running.load()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                }
+                server.stop();
+                });
+            bool ret = server.listen("0.0.0.0", port);
+
+            if (close_thread.joinable()) {
+                close_thread.join();
+            }
+            return ret;
         }
     private:
         httplib::Server server;
         int port;
         ErrorHandler error_handler;
+        std::thread close_thread;
     };
 
     bool verifyToken(const httplib::Request& req, httplib::Response& res)
@@ -173,7 +176,7 @@ namespace sp
             }
 
             uint64_t app_id = std::stoull(req.get_param_value("app_id"));
-            MonitoringRule rule;
+            MonitoringRule rule{};
             bool flag = ServerManager::getInstance().getMonitoringRuleService().getMonitoringRuleByAppId(app_id, rule);
 
             Json::Value root;

@@ -142,6 +142,54 @@ namespace sp
 
             return result;
         }
+        bool createOrUpdateAppInfoBatch(const std::vector<AppInfo>& app_info_list)
+        {
+            if (app_info_list.empty())
+            {
+                return false;
+            }
+
+            std::string sql;
+            sql.append("INSERT INTO AppInfo (id, app_name, executable_path, icon_path, create_time, update_time) VALUES ");
+
+            for (size_t i = 0; i < app_info_list.size(); ++i)
+            {
+                const AppInfo& app_info = app_info_list[i];
+
+                sql.append("(");
+                sql.append(std::to_string(app_info.id));
+                sql.append(", '");
+                sql.append(app_info.app_name);
+                sql.append("', '");
+                sql.append(app_info.executable_path);
+                sql.append("', '");
+                sql.append(app_info.icon_path);
+                sql.append("', '");
+                sql.append(app_info.create_time);
+                sql.append("', '");
+                sql.append(app_info.create_time);
+                sql.append("')");
+
+                if (i != app_info_list.size() - 1)
+                {
+                    sql.append(", ");
+                }
+            }
+
+            // 添加 ON DUPLICATE KEY UPDATE 子句
+            sql.append(" ON DUPLICATE KEY UPDATE ");
+            sql.append("app_name = VALUES(app_name), ");
+            sql.append("executable_path = VALUES(executable_path), ");
+            sql.append("icon_path = VALUES(icon_path), ");
+            sql.append("create_time = VALUES(create_time), ");
+            sql.append("update_time = VALUES(update_time);");
+
+            mtx.lock();
+            bool result = Utils::mysqlQuery(mysql, sql);
+            mtx.unlock();
+
+            return result;
+        }
 
         // 更新应用信息
         bool updateAppInfo(const AppInfo& app_info)

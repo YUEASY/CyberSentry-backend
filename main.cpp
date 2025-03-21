@@ -5,14 +5,33 @@
 
 
 
+static void listenForExit() {
+    std::cout << "press ESC to stop server" << std::endl;
+    while (sp::running.load()) {
+        if (_kbhit()) { // ¼ì²â¼üÅÌÊÇ·ñÓÐÊäÈë
+            int ch = _getch();
+            if (ch == 27) { // 27 = ESC ¼üµÄ ASCII Âë
+                std::cout << "\nESC pressed. Stopping server...\n";
+                sp::running.store(false);
+                break;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
 int main() {
 
     sp::logger::initLogger(false, "", 0);
     
-    //std::thread httpServer(sp::runServer);
-    //httpServer.join();
+    std::thread httpServer(sp::runServer);
+    std::thread keyboardListener(listenForExit);
 
-    sp::runServer();
+    keyboardListener.join(); 
+    std::cout << "Shutting down server...\n";
+
+    httpServer.join(); 
+    std::cout << "Server stopping...\n";
 
 
     return 0;
