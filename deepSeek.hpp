@@ -25,30 +25,30 @@ namespace sp {
             curl = curl_easy_init();
 
             if (curl) {
-                // ÅäÖÃ»ù´¡²ÎÊı
+                // é…ç½®åŸºç¡€å‚æ•°
                 configureCurl(curl);
 
-                // ÉèÖÃÇëÇóÍ·
+                // è®¾ç½®è¯·æ±‚å¤´
                 struct curl_slist* headers = configureHeaders(curl);
 
-                // ¹¹½¨ÇëÇóÌå
+                // æ„å»ºè¯·æ±‚ä½“
                 std::string jsonData = buildRequestJson(prompt, sys_info);
 
-                // ÅäÖÃPOSTÊı¾İ
+                // é…ç½®POSTæ•°æ®
                 curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
                 curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, jsonData.size());
 
-                // ÅäÖÃÏìÓ¦´¦Àí
+                // é…ç½®å“åº”å¤„ç†
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBuffer);
 
-                // Ö´ĞĞÇëÇó
+                // æ‰§è¡Œè¯·æ±‚
                 res = curl_easy_perform(curl);
 
-                // ´¦ÀíÏìÓ¦
+                // å¤„ç†å“åº”
                 result = handleResponse(res, responseBuffer);
 
-                // ÇåÀí×ÊÔ´
+                // æ¸…ç†èµ„æº
                 cleanup(curl, headers);
             }
 
@@ -57,13 +57,13 @@ namespace sp {
         }
 
     private:
-        static constexpr const char* API_KEY = "sk-13a8435b8bb84cbe8ff0ac1feece0ee8";
+        static constexpr const char* API_KEY = "sk-13a8435b8bb84cbe8ff0ac1feece0***";
         static constexpr const char* API_URL = "https://api.deepseek.com/chat/completions";
 
         DeepseekApi() = default;
         ~DeepseekApi() = default;
 
-        // ÏìÓ¦»Øµ÷º¯Êı
+        // å“åº”å›è°ƒå‡½æ•°
         static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
             size_t realsize = size * nmemb;
             std::string* buffer = static_cast<std::string*>(userp);
@@ -99,37 +99,37 @@ namespace sp {
             messages.append(message);
 
             message["role"] = "user";
-            message["content"] = Utils::gbkToUtf8("ÇëÄã·ÖÎöÏµÍ³ĞÅÏ¢½â´ğÒÔÏÂÎÊÌâ,²¢ÇÒ¸ø³öÂú·Ö100·ÖµÄ´ò·Ö,·ÖÊıÓÃ¡°$$¡±°ü¹üÆğÀ´,Èç$90$;(Èç¹ûÒÔÏÂÎÊÌâÓëÏµÍ³×´Ì¬·ÖÎöÎŞ¹ØÇë²»ÒªÀíÎÒ²¢ÇÒ¸ø³ö$-1$");
+            message["content"] = Utils::gbkToUtf8("è¯·ä½ åˆ†æç³»ç»Ÿä¿¡æ¯è§£ç­”ä»¥ä¸‹é—®é¢˜,å¹¶ä¸”ç»™å‡ºæ»¡åˆ†100åˆ†çš„æ‰“åˆ†,åˆ†æ•°ç”¨â€œ$$â€åŒ…è£¹èµ·æ¥,å¦‚$90$;(å¦‚æœä»¥ä¸‹é—®é¢˜ä¸ç³»ç»ŸçŠ¶æ€åˆ†ææ— å…³è¯·ä¸è¦ç†æˆ‘å¹¶ä¸”ç»™å‡º$-1$");
             messages.append(message);
 
             //message["role"] = "assistant";
-            //message["content"] = "Ã÷°×ÁË.";
+            //message["content"] = "æ˜ç™½äº†.";
             //messages.append(message);
 
             //message["role"] = "user";
-            //message["content"] = "ÄÚ´æÊ¹ÓÃÂÊ: 35% Çı¶¯Æ÷: C:\\, ÀàĞÍ: Ó²ÅÌ, ×ÜÈİÁ¿: 976533.32 MB, ¿ÉÓÃ¿Õ¼ä: 442546.27 MB, ÒÑÓÃ¿Õ¼ä: 533987.04 MB, Ê¹ÓÃÂÊ: 54.68%´ÅÅÌ¶ÁÈ¡ËÙ¶È: 0.00 MB/s´ÅÅÌĞ´ÈëËÙ¶È: 0.00 MB/sCPU ÎÂ¶È: 47 ¡ãC.";
+            //message["content"] = "å†…å­˜ä½¿ç”¨ç‡: 35% é©±åŠ¨å™¨: C:\\, ç±»å‹: ç¡¬ç›˜, æ€»å®¹é‡: 976533.32 MB, å¯ç”¨ç©ºé—´: 442546.27 MB, å·²ç”¨ç©ºé—´: 533987.04 MB, ä½¿ç”¨ç‡: 54.68%ç£ç›˜è¯»å–é€Ÿåº¦: 0.00 MB/sç£ç›˜å†™å…¥é€Ÿåº¦: 0.00 MB/sCPU æ¸©åº¦: 47 Â°C.";
             //messages.append(message);
 
             //message["role"] = "assistant";
-            //message["content"] = "¸ù¾İÏµÍ³×´Ì¬·ÖÎöÈçÏÂ£º\nÄÚ´æ×´Ì¬£¨35 % £© - ´¦ÓÚ½¡¿µÇø¼ä£¬Î´´¥·¢ĞÔÄÜÆ¿¾±\n´æ´¢ÏµÍ³·ÖÎö£º\n©À©¤ CÅÌÊ£Óà¿Õ¼ä442GB£¨45.32 % £©\n©À©¤ HDD»úĞµÓ²ÅÌÌØĞÔ\n©¸©¤ µ±Ç°´ÅÅÌI / O´¦ÓÚ¿ÕÏĞ×´Ì¬£¨¶ÁĞ´ËÙ¶È¾ùÎª0£©\nºËĞÄÎÂ¶È£¨47¡æ£© - µÍÓÚ¾¯½äãĞÖµ£¨Í¨³£ > 80¡æĞèÔ¤¾¯£©ÏµÍ³½¡¿µ¶ÈÆÀ¹À£º¸÷Ïî¹Ø¼üÖ¸±ê¾ù´¦ÓÚÕı³£·¶Î§£¬ÎŞ×ÊÔ´ÕùÓÃ»òÓ²¼ş·çÏÕ£¬µ±Ç°ÏµÍ³¸ºÔØ½ÏÇá¡£½¨Òé¶¨ÆÚ¼à¿Ø´æ´¢¿Õ¼äÏûºÄÇ÷ÊÆ¡£×îÖÕÆÀ·Ö£º~94~";
+            //message["content"] = "æ ¹æ®ç³»ç»ŸçŠ¶æ€åˆ†æå¦‚ä¸‹ï¼š\nå†…å­˜çŠ¶æ€ï¼ˆ35 % ï¼‰ - å¤„äºå¥åº·åŒºé—´ï¼Œæœªè§¦å‘æ€§èƒ½ç“¶é¢ˆ\nå­˜å‚¨ç³»ç»Ÿåˆ†æï¼š\nâ”œâ”€ Cç›˜å‰©ä½™ç©ºé—´442GBï¼ˆ45.32 % ï¼‰\nâ”œâ”€ HDDæœºæ¢°ç¡¬ç›˜ç‰¹æ€§\nâ””â”€ å½“å‰ç£ç›˜I / Oå¤„äºç©ºé—²çŠ¶æ€ï¼ˆè¯»å†™é€Ÿåº¦å‡ä¸º0ï¼‰\næ ¸å¿ƒæ¸©åº¦ï¼ˆ47â„ƒï¼‰ - ä½äºè­¦æˆ’é˜ˆå€¼ï¼ˆé€šå¸¸ > 80â„ƒéœ€é¢„è­¦ï¼‰ç³»ç»Ÿå¥åº·åº¦è¯„ä¼°ï¼šå„é¡¹å…³é”®æŒ‡æ ‡å‡å¤„äºæ­£å¸¸èŒƒå›´ï¼Œæ— èµ„æºäº‰ç”¨æˆ–ç¡¬ä»¶é£é™©ï¼Œå½“å‰ç³»ç»Ÿè´Ÿè½½è¾ƒè½»ã€‚å»ºè®®å®šæœŸç›‘æ§å­˜å‚¨ç©ºé—´æ¶ˆè€—è¶‹åŠ¿ã€‚æœ€ç»ˆè¯„åˆ†ï¼š~94~";
             //messages.append(message);
 
             //message["role"] = "user";
-            //message["content"] = "ÄÚ´æÊ¹ÓÃÂÊ: 35% Çı¶¯Æ÷: C:\\, ÀàĞÍ: Ó²ÅÌ, ×ÜÈİÁ¿: 976533.32 MB, ¿ÉÓÃ¿Õ¼ä: 442546.27 MB, ÒÑÓÃ¿Õ¼ä: 533987.04 MB, Ê¹ÓÃÂÊ: 54.68%´ÅÅÌ¶ÁÈ¡ËÙ¶È: 0.00 MB/s´ÅÅÌĞ´ÈëËÙ¶È: 0.00 MB/sCPU ÎÂ¶È: 47 ¡ãC.";
+            //message["content"] = "å†…å­˜ä½¿ç”¨ç‡: 35% é©±åŠ¨å™¨: C:\\, ç±»å‹: ç¡¬ç›˜, æ€»å®¹é‡: 976533.32 MB, å¯ç”¨ç©ºé—´: 442546.27 MB, å·²ç”¨ç©ºé—´: 533987.04 MB, ä½¿ç”¨ç‡: 54.68%ç£ç›˜è¯»å–é€Ÿåº¦: 0.00 MB/sç£ç›˜å†™å…¥é€Ÿåº¦: 0.00 MB/sCPU æ¸©åº¦: 47 Â°C.";
             //messages.append(message);
 
             //message["role"] = "assistant";
-            //message["content"] = "¸ù¾İÏµÍ³×´Ì¬·ÖÎöÈçÏÂ£º\nÄÚ´æ×´Ì¬£¨35 % £© - ´¦ÓÚ½¡¿µÇø¼ä£¬Î´´¥·¢ĞÔÄÜÆ¿¾±\n´æ´¢ÏµÍ³·ÖÎö£º\n©À©¤ CÅÌÊ£Óà¿Õ¼ä442GB£¨45.32 % £©\n©À©¤ HDD»úĞµÓ²ÅÌÌØĞÔ\n©¸©¤ µ±Ç°´ÅÅÌI / O´¦ÓÚ¿ÕÏĞ×´Ì¬£¨¶ÁĞ´ËÙ¶È¾ùÎª0£©\nºËĞÄÎÂ¶È£¨47¡æ£© - µÍÓÚ¾¯½äãĞÖµ£¨Í¨³£ > 80¡æĞèÔ¤¾¯£©ÏµÍ³½¡¿µ¶ÈÆÀ¹À£º¸÷Ïî¹Ø¼üÖ¸±ê¾ù´¦ÓÚÕı³£·¶Î§£¬ÎŞ×ÊÔ´ÕùÓÃ»òÓ²¼ş·çÏÕ£¬µ±Ç°ÏµÍ³¸ºÔØ½ÏÇá¡£½¨Òé¶¨ÆÚ¼à¿Ø´æ´¢¿Õ¼äÏûºÄÇ÷ÊÆ¡£×îÖÕÆÀ·Ö£º~94~";
+            //message["content"] = "æ ¹æ®ç³»ç»ŸçŠ¶æ€åˆ†æå¦‚ä¸‹ï¼š\nå†…å­˜çŠ¶æ€ï¼ˆ35 % ï¼‰ - å¤„äºå¥åº·åŒºé—´ï¼Œæœªè§¦å‘æ€§èƒ½ç“¶é¢ˆ\nå­˜å‚¨ç³»ç»Ÿåˆ†æï¼š\nâ”œâ”€ Cç›˜å‰©ä½™ç©ºé—´442GBï¼ˆ45.32 % ï¼‰\nâ”œâ”€ HDDæœºæ¢°ç¡¬ç›˜ç‰¹æ€§\nâ””â”€ å½“å‰ç£ç›˜I / Oå¤„äºç©ºé—²çŠ¶æ€ï¼ˆè¯»å†™é€Ÿåº¦å‡ä¸º0ï¼‰\næ ¸å¿ƒæ¸©åº¦ï¼ˆ47â„ƒï¼‰ - ä½äºè­¦æˆ’é˜ˆå€¼ï¼ˆé€šå¸¸ > 80â„ƒéœ€é¢„è­¦ï¼‰ç³»ç»Ÿå¥åº·åº¦è¯„ä¼°ï¼šå„é¡¹å…³é”®æŒ‡æ ‡å‡å¤„äºæ­£å¸¸èŒƒå›´ï¼Œæ— èµ„æºäº‰ç”¨æˆ–ç¡¬ä»¶é£é™©ï¼Œå½“å‰ç³»ç»Ÿè´Ÿè½½è¾ƒè½»ã€‚å»ºè®®å®šæœŸç›‘æ§å­˜å‚¨ç©ºé—´æ¶ˆè€—è¶‹åŠ¿ã€‚æœ€ç»ˆè¯„åˆ†ï¼š~94~";
             //messages.append(message);
 
             //message["role"] = "user";
-            //message["content"] = " ÎÒÏ²»¶Äã¡£";
+            //message["content"] = " æˆ‘å–œæ¬¢ä½ ã€‚";
             //message["role"] = "assistant";
-            //message["content"] = "~-1~\n¸ÃÎÊÌâÓëÏµÍ³×´Ì¬·ÖÎöÎŞ¹Ø.";
+            //message["content"] = "~-1~\nè¯¥é—®é¢˜ä¸ç³»ç»ŸçŠ¶æ€åˆ†ææ— å…³.";
             //messages.append(message);
 
             message["role"] = "user";
-            message["content"] = prompt + Utils::gbkToUtf8("\nÏµÍ³×´Ì¬:") + sys_info;
+            message["content"] = prompt + Utils::gbkToUtf8("\nç³»ç»ŸçŠ¶æ€:") + sys_info;
             messages.append(message);
 
             root["messages"] = messages;
@@ -146,19 +146,19 @@ namespace sp {
 
             if (res != CURLE_OK) {
                 result["error"] = curl_easy_strerror(res);
-                LOG_ERROR("APIÇëÇóÊ§°Ü: ", result["error"].asString());
+                LOG_ERROR("APIè¯·æ±‚å¤±è´¥: ", result["error"].asString());
                 return result;
             }
 
             std::string errors;
             if (!jsonReader->parse(response.c_str(), response.c_str() + response.size(), &result, &errors)) {
-                result["error"] = "JSON½âÎöÊ§°Ü: " + errors;
+                result["error"] = "JSONè§£æå¤±è´¥: " + errors;
                 LOG_ERROR(result["error"].asString());
                 return result;
             }
 
             if (result.isMember("error")) {
-                LOG_ERROR("API·µ»Ø´íÎó: ", result.toStyledString());
+                LOG_ERROR("APIè¿”å›é”™è¯¯: ", result.toStyledString());
                 return result;
             }
 
@@ -166,7 +166,7 @@ namespace sp {
                 return result;
             }
 
-            result["error"] = "ÎŞĞ§";
+            result["error"] = "æ— æ•ˆ";
             return result;
         }
 
